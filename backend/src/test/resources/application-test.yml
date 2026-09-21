@@ -1,0 +1,25 @@
+# Test profile: in-memory H2 and offline AI (models are mocked via TestAiConfig).
+spring:
+  autoconfigure:
+    # Disable real model autoconfig so tests never contact Ollama/OpenAI; TestAiConfig supplies mocks.
+    exclude:
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  ai:
+    openai:
+      api-key: test-key-not-used
+
+rag:
+  top-k: 4
+  similarity-threshold: 0.5
+  provider: ollama

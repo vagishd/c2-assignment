@@ -1,0 +1,28 @@
+# Secrets — never commit
+*.env
+.env
+.env.*
+**/application-local.yml
+**/*secret*
+**/*credentials*
+
+# Build output
+backend/build/
+backend/.gradle/
+backend/bin/
+
+# H2 database files
+backend/data/
+*.mv.db
+*.trace.db
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store

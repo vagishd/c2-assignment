@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: ticket-ai
+
+  datasource:
+    # H2 file mode so data survives application restart (FR-8)
+    url: jdbc:h2:file:./data/ticketsdb;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: false
+    open-in-view: false
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  ai:
+    # Default provider is Ollama (local). Override with the 'openai' profile to use OpenAI.
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_CHAT_MODEL:llama3.1}
+      embedding:
+        options:
+          model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+    # OpenAI is disabled by default; enabled only under the 'openai' profile.
+    openai:
+      api-key: ${OPENAI_API_KEY:disabled}
+
+# RAG retrieval parameters are configurable, never hardcoded (FR-20)
+rag:
+  top-k: 4
+  similarity-threshold: 0.5
+  # provider actually used for embeddings/chat: ollama (default) or openai
+  provider: ${AI_PROVIDER:ollama}
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.support.ticketai: INFO
