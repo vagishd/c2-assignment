@@ -12,11 +12,11 @@ public record AskResponse(
         List<TicketSource> sources,
         boolean grounded
 ) {
+    /** The exact sentence the assistant must use when it cannot answer from ticket context. */
+    public static final String NO_MATCH_MESSAGE =
+            "No relevant tickets were found to answer this question.";
+
     public static AskResponse noMatch() {
-        return new AskResponse(
-                "No relevant tickets were found to answer this question.",
-                List.of(),
-                false
-        );
+        return new AskResponse(NO_MATCH_MESSAGE, List.of(), false);
     }
 }

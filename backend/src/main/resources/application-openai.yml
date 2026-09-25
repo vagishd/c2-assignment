@@ -1,5 +1,10 @@
 # Activate with: --spring.profiles.active=openai  (requires OPENAI_API_KEY env var)
 spring:
+  # Under this profile, use OpenAI and exclude the Ollama model autoconfig (overrides the default list).
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}

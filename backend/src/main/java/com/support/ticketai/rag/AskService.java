@@ -3,6 +3,7 @@ package com.support.ticketai.rag;
 import com.support.ticketai.config.RagProperties;
 import com.support.ticketai.dto.AskResponse;
 import com.support.ticketai.dto.TicketSource;
+import com.support.ticketai.exception.AiUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
@@ -34,12 +35,12 @@ public class AskService {
             provided below. Do not use any outside or general knowledge.
             Cite the specific ticket IDs (e.g. TKT-1001) that support your answer.
             If the context does not contain the answer, reply exactly:
-            "No relevant tickets were found to answer this question."
+            "%s"
             Do not guess or fabricate.
 
             Ticket context:
             {context}
-            """;
+            """.formatted(AskResponse.NO_MATCH_MESSAGE);
 
     private final ChatClient chatClient;
     private final VectorStore vectorStore;
@@ -54,7 +55,14 @@ public class AskService {
     }
 
     public AskResponse ask(String question) {
-        List<Document> matches = retrieve(question);
+        List<Document> matches;
+        try {
+            matches = retrieve(question);
+        } catch (Exception ex) {
+            // Embedding the question failed — most likely the model service is offline.
+            log.warn("Retrieval failed — embedding model unavailable ({})", ex.getMessage());
+            throw new AiUnavailableException(ex);
+        }
 
         if (matches.isEmpty()) {
             log.info("No tickets above similarity threshold for question; returning no-match");
@@ -62,15 +70,35 @@ public class AskService {
         }
 
         String context = buildContext(matches);
-        String answer = chatClient.prompt()
-                .system(system -> system.text(SYSTEM_PROMPT).param("context", context))
-                .user(question)
-                .call()
-                .content();
+        String answer;
+        try {
+            answer = chatClient.prompt()
+                    .system(system -> system.text(SYSTEM_PROMPT).param("context", context))
+                    .user(question)
+                    .call()
+                    .content();
+        } catch (Exception ex) {
+            log.warn("Chat generation failed — model unavailable ({})", ex.getMessage());
+            throw new AiUnavailableException(ex);
+        }
+
+        // Reconcile: if the model emitted the no-match sentence despite having context, treat it as a
+        // genuine no-match rather than returning a contradictory answer with populated sources.
+        if (answer == null || answer.isBlank() || isNoMatch(answer)) {
+            log.info("Model produced no grounded answer from {} candidate(s); returning no-match",
+                    matches.size());
+            return AskResponse.noMatch();
+        }
 
         List<TicketSource> sources = extractSources(matches);
         log.info("Answered question grounded in {} ticket(s)", sources.size());
-        return new AskResponse(answer, sources, true);
+        return new AskResponse(answer.trim(), sources, true);
+    }
+
+    private boolean isNoMatch(String answer) {
+        String normalized = answer.toLowerCase().replaceAll("[\"'.\\s]+", " ").trim();
+        String target = AskResponse.NO_MATCH_MESSAGE.toLowerCase().replaceAll("[\"'.\\s]+", " ").trim();
+        return normalized.contains(target);
     }
 
     private List<Document> retrieve(String question) {

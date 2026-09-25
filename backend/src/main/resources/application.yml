@@ -2,6 +2,13 @@ spring:
   application:
     name: ticket-ai
 
+  autoconfigure:
+    # Default provider is Ollama. Exclude the OpenAI model autoconfig so there is exactly one
+    # ChatModel/EmbeddingModel bean. The 'openai' profile re-enables OpenAI and excludes Ollama.
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+
   datasource:
     # H2 file mode so data survives application restart (FR-8)
     url: jdbc:h2:file:./data/ticketsdb;AUTO_SERVER=TRUE

@@ -33,11 +33,26 @@ public class StartupIngestionRunner implements ApplicationRunner {
             log.info("No tickets to ingest on startup");
             return;
         }
-        tickets.forEach(ticket -> {
+        int embedded = 0;
+        for (Ticket ticket : tickets) {
             // Touch lazy comments inside the transaction so the knowledge document is complete.
             ticket.getComments().size();
-            ingestionService.ingest(ticket);
-        });
-        log.info("Startup ingestion complete: {} ticket(s) embedded", tickets.size());
+            try {
+                ingestionService.ingest(ticket);
+                embedded++;
+            } catch (Exception ex) {
+                // The embedding model may be offline (e.g. Ollama not running). CRUD and the state
+                // machine must still work, so we log and continue rather than failing startup.
+                log.warn("Skipped startup ingestion for {} — embedding model unavailable ({})",
+                        ticket.getTicketRef(), ex.getMessage());
+            }
+        }
+        if (embedded == tickets.size()) {
+            log.info("Startup ingestion complete: {} ticket(s) embedded", embedded);
+        } else {
+            log.warn("Startup ingestion partial: {}/{} ticket(s) embedded. The assistant will have "
+                    + "limited context until the embedding model is available and tickets are re-ingested.",
+                    embedded, tickets.size());
+        }
     }
 }

@@ -27,6 +27,13 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(ex.getErrorCode(), ex.getMessage());
     }
 
+    @ExceptionHandler(AiUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleAiUnavailable(AiUnavailableException ex) {
+        log.warn("AI unavailable: {}", ex.getMessage());
+        return ErrorResponse.of(ex.getErrorCode(), ex.getMessage());
+    }
+
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleBusiness(BusinessException ex) {

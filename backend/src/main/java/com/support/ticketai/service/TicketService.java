@@ -40,7 +40,7 @@ public class TicketService {
         Ticket saved = ticketRepository.save(ticket);
 
         log.info("Created ticket {} ({})", saved.getTicketRef(), saved.getId());
-        ingestionService.ingest(saved);
+        safeIngest(saved);
         return saved;
     }
 
@@ -74,7 +74,7 @@ public class TicketService {
 
         log.info("Updated ticket {}", ticket.getTicketRef());
         // Re-ingest so the knowledge base does not go stale (FR-19).
-        ingestionService.ingest(ticket);
+        safeIngest(ticket);
         return ticket;
     }
 
@@ -84,7 +84,7 @@ public class TicketService {
         ticket.addComment(comment);
 
         log.info("Added comment to ticket {}", ticket.getTicketRef());
-        ingestionService.ingest(ticket);
+        safeIngest(ticket);
         // The comment now has an id because Ticket cascades the persist within this transaction.
         return comment;
     }
@@ -106,7 +106,21 @@ public class TicketService {
 
         log.info("Transitioned ticket {} from {} to {}", ticket.getTicketRef(), current, target);
         // Status/resolution changed — refresh embeddings (FR-19).
-        ingestionService.ingest(ticket);
+        safeIngest(ticket);
         return ticket;
+    }
+
+    /**
+     * Re-ingest a ticket, tolerating an unavailable embedding model. Ticket persistence is the
+     * source of truth; if embedding fails (e.g. the model server is offline) we log and continue so
+     * CRUD keeps working. The ticket will be re-embedded on the next change or on restart.
+     */
+    private void safeIngest(Ticket ticket) {
+        try {
+            ingestionService.ingest(ticket);
+        } catch (Exception ex) {
+            log.warn("Re-ingestion skipped for {} — embedding model unavailable ({})",
+                    ticket.getTicketRef(), ex.getMessage());
+        }
     }
 }
