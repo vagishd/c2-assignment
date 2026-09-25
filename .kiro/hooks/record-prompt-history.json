@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Record Prompt History",
+      "trigger": "UserPromptSubmit",
+      "description": "Appends every submitted user prompt to docs/prompt-history.md and a per-session SpecStory transcript so the repo keeps a durable prompt log.",
+      "action": {
+        "type": "command",
+        "command": "python3 \"${KIRO_PROJECT_ROOT:-.}/.kiro/scripts/record_prompt.py\""
+      }
+    }
+  ]
+}
